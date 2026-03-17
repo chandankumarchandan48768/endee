@@ -56,16 +56,7 @@ app.add_middleware(
 
 # Serve the frontend at /
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
-if FRONTEND_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
-
-
-@app.get("/")
-async def serve_frontend():
-    index_path = FRONTEND_DIR / "index.html"
-    if index_path.exists():
-        return FileResponse(str(index_path))
-    return {"message": "Endee RAG Q&A API is running. Visit /docs for API reference."}
+# Static files will be mounted at the bottom of the file to not override the API routes
 
 
 # --- Endee client (initialised once) ---
@@ -284,3 +275,7 @@ def embed_chunk_batch(texts: list) -> list:
     """Batch embed texts using the embedder module."""
     from embedder import embed
     return embed(texts)
+
+# Catch-all to serve frontend static files
+if FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

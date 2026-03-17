@@ -9,16 +9,16 @@ from typing import List, Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "llama3-8b-8192")
+LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
 
-SYSTEM_PROMPT = """You are a helpful AI assistant that answers questions based on the provided document context.
+SYSTEM_PROMPT = """You are a highly capable AI assistant that answers questions based strictly on the provided document context.
 
 Instructions:
-- Answer the user's question using ONLY the information from the provided context.
-- Be concise, accurate, and helpful.
-- If the context doesn't contain enough information to answer, say so clearly.
-- Cite source documents when relevant.
-- Format your response in a clear, readable way."""
+- Answer the user's question using ONLY the information from the provided context. If the context doesn't contain enough information to answer, say so clearly.
+- Format your response beautifully and professionally, similar to ChatGPT/Gemini. Use Markdown extensively (e.g., bullet points, bold text for emphasis, numbered lists, and headers).
+- Make sure the response is well-structured and easy to read.
+- Cite specific source documents (e.g., [Source 1]) when relevant.
+- Be concise, accurate, and highly informative."""
 
 
 def _build_context_str(chunks: List[Dict[str, Any]]) -> str:

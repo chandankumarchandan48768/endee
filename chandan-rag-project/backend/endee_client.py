@@ -7,6 +7,11 @@ import logging
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from endee import Endee, Precision
+from endee.schema import VectorItem
+
+# Monkey-patch SDK bug where it calls .get() on a Pydantic model
+if not hasattr(VectorItem, "get"):
+    VectorItem.get = lambda self, key, default=None: getattr(self, key, default)
 
 load_dotenv()
 
@@ -31,7 +36,12 @@ class EndeeClient:
         """Create the document index if it doesn't exist yet."""
         try:
             existing = self.client.list_indexes()
-            names = [idx.get("name") for idx in (existing or [])]
+            if isinstance(existing, dict) and "indexes" in existing:
+                index_list = existing["indexes"]
+            else:
+                index_list = existing or []
+
+            names = [(idx.get("name") if isinstance(idx, dict) else getattr(idx, "name", idx)) for idx in index_list]
             if self.index_name not in names:
                 logger.info(f"Creating Endee index '{self.index_name}' (dim={EMBEDDING_DIM})")
                 self.client.create_index(
@@ -107,7 +117,7 @@ class EndeeClient:
             dummy_vec = [0.0] * EMBEDDING_DIM
             results = self.index.query(
                 vector=dummy_vec,
-                top_k=10000,
+                top_k=512,
                 filter={"doc_id": doc_id},
             )
             ids = [r.get("id") for r in results]
@@ -123,7 +133,7 @@ class EndeeClient:
         """Return a summary of unique ingested documents."""
         try:
             dummy_vec = [0.0] * EMBEDDING_DIM
-            results = self.index.query(vector=dummy_vec, top_k=10000)
+            results = self.index.query(vector=dummy_vec, top_k=512)
             docs: Dict[str, Dict] = {}
             for r in results:
                 meta = r.get("meta", {})
