@@ -1,251 +1,239 @@
-# Endee RAG — AI Document Q&A System
+# 🧠 Endee RAG — AI Document Q&A System
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Vector%20DB-Endee-6366f1?style=for-the-badge&logo=database" />
-  <img src="https://img.shields.io/badge/Embeddings-MiniLM--L6--v2-22c55e?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/LLM-Llama%203%20(Groq)-f59e0b?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi" />
-</p>
-
-> A **Retrieval Augmented Generation (RAG)** system that uses [**Endee**](https://github.com/endee-io/endee) as the vector database for semantic document search and AI-powered Q&A.
+> A Retrieval-Augmented Generation (RAG) system powered by the **Endee Vector Database**, enabling intelligent, context-aware answers to natural language questions over your own documents.
 
 ---
 
-## 📌 Project Overview
+## 📌 Introduction
 
-This project demonstrates a production-ready **RAG pipeline** built with Endee as the core vector storage and retrieval layer. Users can:
+This project is built as part of the **Tap Academy × Endee.io** assignment. Candidates were required to design and develop an AI/ML application using [Endee](https://github.com/endee-io/endee) as the vector database, demonstrating a practical use case.
 
-1. **Upload documents** (PDF or TXT) — they are chunked, embedded, and stored in Endee.
-2. **Ask natural language questions** — the system retrieves the most relevant chunks from Endee via cosine similarity search, then uses a large language model (Llama 3 via Groq) to generate a grounded, cited answer.
-3. **Run semantic search** — directly query Endee to find relevant document sections purely by vector similarity.
+This project implements a full **RAG (Retrieval-Augmented Generation)** pipeline — upload any PDF or text document, and ask natural language questions. The system finds the most semantically relevant content using Endee's vector search, then passes it to a powerful LLM (via Groq) to generate a clear, well-structured answer — just like ChatGPT, but over *your* documents.
 
 ---
 
-## 🏗️ System Architecture
+## ✨ Features
+
+- 📄 **Document Upload** — Ingest PDF, TXT, and Markdown files
+- 🔍 **Semantic Search** — Vector similarity search powered by Endee
+- 🤖 **AI Q&A (RAG)** — LLM-generated answers grounded in your documents
+- 💻 **Code Highlighting** — Syntax-highlighted code blocks with one-click copy
+- 📊 **Source Citations** — Answers include relevance scores and source references
+- 🌐 **Full-Stack Web App** — Clean, modern UI served directly from FastAPI
+
+---
+
+## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER BROWSER                            │
-│          Chat Q&A │ Semantic Search │ Document Manager          │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ HTTP (REST)
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│               FastAPI Backend (Python)                          │
-│                                                                 │
-│  POST /upload   ─── document_processor.py ─── PDF/TXT chunker  │
-│  POST /search   ─┐                                             │
-│  POST /ask      ─┤── embedder.py ─── MiniLM-L6-v2 (384 dims)  │
-│                  │                                             │
-│                  ▼                                             │
-│            endee_client.py                                      │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ Endee Python SDK (HTTP)
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              Endee Vector Database  (port 8080)                 │
-│                                                                 │
-│   Index: "documents"  │  Dimension: 384  │  Space: cosine      │
-│   Precision: INT8     │  Payload filtering enabled             │
-└─────────────────────────────────────────────────────────────────┘
-                             │
-                             │ (RAG path only)
-                             ▼
-                   ┌─────────────────┐
-                   │  Groq API       │
-                   │  Llama 3 8B     │
-                   └─────────────────┘
-```
-
-### RAG Pipeline Flow
-
-```
-User Question
-    │
-    ▼
-[Embed Question]  ←── sentence-transformers/all-MiniLM-L6-v2
-    │
-    ▼
-[Search Endee]  ←── cosine similarity, top-k chunks retrieved
-    │
-    ▼
-[Build Prompt]  ←── Question + retrieved context chunks
-    │
-    ▼
-[LLM Generation]  ←── Groq API (Llama 3 8B)
-    │
-    ▼
-[Return Answer + Sources]
+┌─────────────────────────────────────────────────────────┐
+│                    User's Browser                       │
+│          (HTML + CSS + JS  →  http://localhost:8000)    │
+└────────────────────────┬────────────────────────────────┘
+                         │ HTTP Requests (REST API)
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│              FastAPI Backend  (Python)                  │
+│                                                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │ /upload      │  │  /ask (RAG)  │  │  /search     │  │
+│  │ Chunk + Embed│  │ Embed + Query│  │ Embed + Query│  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
+│         │                 │                 │           │
+│  ┌──────▼─────────────────▼─────────────────▼───────┐  │
+│  │       Sentence-Transformers Embedder              │  │
+│  │       (all-MiniLM-L6-v2, dim=384)                 │  │
+│  └──────────────────────┬────────────────────────────┘  │
+└─────────────────────────┼───────────────────────────────┘
+                          │ Vector Upsert / Query
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│        Endee Vector Database  (Docker Container)        │
+│              http://localhost:8080                      │
+│   Index: "documents"  |  Space: cosine  |  dim: 384     │
+└─────────────────────────────────────────────────────────┘
+                          │ Retrieved Top-K Chunks
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│             Groq LLM API  (llama-3.1-8b-instant)        │
+│        Generates a well-structured Markdown answer      │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ⚡ How Endee Is Used
+## 🔄 Application Flow
 
-| Feature | Implementation |
-|---------|---------------|
-| **Index Creation** | `client.create_index(name="documents", dimension=384, space_type="cosine", precision=Precision.INT8)` |
-| **Vector Upsert** | `index.upsert([{"id": chunk_id, "vector": embedding, "meta": metadata}])` |
-| **Semantic Search** | `index.query(vector=query_embedding, top_k=5)` |
-| **Metadata Storage** | Each chunk's text, source filename, doc_id, and chunk_index stored as payload |
-| **Filtered Search** | Filter by `doc_id` to search within a specific document |
-| **Bulk Delete** | Query + delete by `doc_id` for document management |
+### 1. 📤 Document Ingestion
+```
+User Uploads File
+      │
+      ▼
+Document Processor  ──→  Split into ~500-char chunks
+      │
+      ▼
+Sentence-Transformer  ──→  Embed each chunk → 384-dim vector
+      │
+      ▼
+Endee Vector DB  ──→  Upsert vectors with metadata (source, chunk_index, doc_id)
+```
 
-**Why Endee?**
-- High-performance vector search with INT8 quantization (memory efficient)
-- Simple HTTP API and clean Python SDK
-- Self-hosted (no API key needed for the vector DB itself)
-- Supports payload metadata for rich filtering
+### 2. 🔍 Semantic Search
+```
+User types a query
+      │
+      ▼
+Embed query  ──→  384-dim vector
+      │
+      ▼
+Endee cosine similarity search  ──→  Top-K most relevant chunks
+      │
+      ▼
+Return results with relevance scores
+```
+
+### 3. 🤖 AI Q&A (RAG Pipeline)
+```
+User asks a question
+      │
+      ▼
+Embed question  ──→  vector
+      │
+      ▼
+Endee retrieves Top-K relevant chunks
+      │
+      ▼
+Build context prompt:  [System Prompt] + [Retrieved Chunks] + [User Question]
+      │
+      ▼
+Groq LLM (llama-3.1-8b-instant)  ──→  Generates Markdown-formatted answer
+      │
+      ▼
+Frontend renders response with syntax highlighting + copy buttons
+```
 
 ---
 
-## 🚀 Setup & Installation
+## 🗂️ Project Structure
+
+```
+tap-academy-project/
+├── backend/
+│   ├── app.py               # FastAPI application & all API endpoints
+│   ├── endee_client.py      # Endee vector DB wrapper (index, upsert, search)
+│   ├── embedder.py          # Sentence-transformers embedding logic
+│   ├── document_processor.py# PDF/TXT chunking logic
+│   └── llm_client.py        # Groq LLM integration
+├── frontend/
+│   ├── index.html           # Main SPA with marked.js + highlight.js
+│   ├── style.css            # Dark-mode premium UI styles
+│   └── app.js               # Frontend logic (chat, search, upload)
+├── data/
+│   └── sample_docs/         # Pre-built AI & Vector DB sample texts
+├── scripts/
+│   └── ingest_sample.py     # CLI script to seed the database
+├── docker-compose.yml        # Endee vector DB container
+├── .env                     # Environment variables (API keys, config)
+└── requirements.txt         # Python dependencies
+```
+
+---
+
+## 🚀 Setup & Running
 
 ### Prerequisites
-- **Docker** (to run Endee)
-- **Python 3.10+**
-- **Groq API Key** (free) — [console.groq.com](https://console.groq.com) *(optional — works without it)*
+- Python 3.10+
+- Docker Desktop (running)
+- A free [Groq API Key](https://console.groq.com)
 
-### Step 1: Clone the Repository
-
+### 1. Clone the Repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/endee-rag-qa.git
-cd endee-rag-qa
+git clone https://github.com/chandankumarchandan48768/endee
+cd endee/tap-academy-project
 ```
 
-### Step 2: Start Endee Vector Database
-
+### 2. Start Endee Vector Database
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-Endee will start on `http://localhost:8080`. Verify it's running:
-
-```bash
-curl http://localhost:8080/health
-```
-
-### Step 3: Install Python Dependencies
-
+### 3. Set Up Python Environment
 ```bash
 python3 -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
+source venv/bin/activate       # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Step 4: Configure Environment
-
-```bash
-cp .env.example .env
-# Edit .env and add your GROQ_API_KEY (optional but recommended)
+### 4. Configure Environment Variables
+Edit `.env` and add your Groq API key:
+```env
+GROQ_API_KEY=your_groq_api_key_here
+LLM_MODEL=llama-3.1-8b-instant
+ENDEE_URL=http://localhost:8080
 ```
 
-### Step 5: Start the Backend API
-
+### 5. Start the Backend
 ```bash
 cd backend
 uvicorn app:app --reload --port 8000
 ```
 
-### Step 6: Open the Web Interface
+### 6. Open the App
+Visit **[http://localhost:8000](http://localhost:8000)** in your browser.
 
-Open [http://localhost:8000](http://localhost:8000) in your browser.
-
-### Step 7: Load Sample Documents (Optional)
-
+### 7. (Optional) Seed Sample Documents
 ```bash
-# In a new terminal
+# In a new terminal, from tap-academy-project/
+source venv/bin/activate
 python scripts/ingest_sample.py
 ```
-
-This ingests pre-built documents about AI and vector databases so you can immediately ask questions without uploading your own files.
-
----
-
-## 📡 API Reference
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Server & Endee health check |
-| `POST` | `/upload` | Upload PDF/TXT → chunk → embed → store in Endee |
-| `POST` | `/search` | Semantic vector search in Endee |
-| `POST` | `/ask` | Full RAG: retrieve from Endee + LLM answer |
-| `GET` | `/documents` | List all indexed documents |
-| `DELETE` | `/documents/{doc_id}` | Remove a document from Endee |
-
-Interactive docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-
-### Example: Semantic Search
-
-```bash
-curl -X POST http://localhost:8000/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "How does machine learning work?", "top_k": 3}'
-```
-
-### Example: RAG Q&A
-
-```bash
-curl -X POST http://localhost:8000/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What are the applications of AI in healthcare?", "top_k": 5}'
-```
-
----
-
-## 📁 Project Structure
-
-```
-.
-├── docker-compose.yml          # Endee vector DB server
-├── requirements.txt            # Python dependencies
-├── .env.example                # Environment variable template
-├── README.md
-├── backend/
-│   ├── app.py                  # FastAPI application
-│   ├── endee_client.py         # Endee SDK wrapper
-│   ├── embedder.py             # Sentence-transformer embeddings
-│   ├── document_processor.py   # PDF/TXT chunking pipeline
-│   └── llm_client.py           # Groq LLM integration
-├── frontend/
-│   ├── index.html              # Single-page web application
-│   ├── style.css               # Dark premium UI styles
-│   └── app.js                  # Frontend logic
-├── data/
-│   └── sample_docs/            # Sample documents for demo
-└── scripts/
-    └── ingest_sample.py        # Sample data ingestion script
-```
-
----
-
-## 🎯 Use Cases Demonstrated
-
-- ✅ **RAG (Retrieval Augmented Generation)** — main Q&A feature
-- ✅ **Semantic Search** — pure vector similarity search tab
-- ✅ **Document Management** — upload, list, delete documents in Endee
-- ✅ **Hybrid Metadata Filtering** — filter search by document ID
-- ✅ **Payload Storage** — text chunks stored as Endee metadata
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Component | Technology |
-|-----------|-----------|
-| Vector Database | **Endee** (self-hosted, Docker) |
-| Embedding Model | `sentence-transformers/all-MiniLM-L6-v2` (384 dims) |
-| LLM | `Llama 3 8B` via Groq API |
-| Backend | **FastAPI** + Python |
-| Frontend | Vanilla HTML / CSS / JavaScript |
-| PDF Parsing | PyMuPDF |
+| Layer | Technology |
+|-------|------------|
+| Vector Database | **Endee** (self-hosted via Docker) |
+| Embeddings | `sentence-transformers/all-MiniLM-L6-v2` |
+| LLM | **Llama 3.1** via **Groq API** |
+| Backend | **FastAPI** (Python) |
+| Frontend | HTML + CSS + Vanilla JS |
+| Markdown Rendering | `marked.js` + `highlight.js` |
 
 ---
 
-## 📝 License
+## 🔌 API Endpoints
 
-MIT
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Server & Endee connection status |
+| `POST` | `/upload` | Upload & ingest a document |
+| `POST` | `/ask` | Full RAG pipeline — ask a question |
+| `POST` | `/search` | Pure semantic vector search |
+| `GET` | `/documents` | List all indexed documents |
+| `DELETE` | `/documents/{id}` | Delete a document from Endee |
 
 ---
 
-*Built for the Endee.io × Tap Academy assignment — demonstrating a practical RAG application powered by the Endee vector database.*
+## 📖 Why Endee?
+
+[Endee](https://github.com/endee-io/endee) is a lightweight, high-performance vector database designed for AI applications. In this project, Endee is used to:
+
+- **Store** document embeddings with rich metadata
+- **Index** vectors using cosine similarity in an HNSW graph
+- **Retrieve** the most semantically relevant chunks in milliseconds
+
+This enables the RAG system to ground LLM responses in factual, user-provided content — eliminating hallucinations and providing source-cited answers.
+
+---
+
+## 👤 Author
+
+**Chandan Kumar K N**  
+GitHub: [chandankumarchandan48768](https://github.com/chandankumarchandan48768)  
+Email: chandankumar.springdev@gmail.com
+
+---
+
+*Built for Tap Academy × Endee.io Assignment — March 2026*
