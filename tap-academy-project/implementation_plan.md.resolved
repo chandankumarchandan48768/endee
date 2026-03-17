@@ -1,0 +1,170 @@
+# RAG-Based Document Q&A System Using Endee Vector Database
+
+A complete AI/ML project demonstrating **Retrieval Augmented Generation (RAG)** using **Endee** as the vector database. Users upload documents (PDF/TXT), the system indexes them in Endee, and then allows natural language Q&A over the documents.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **LLM API Key**: The Q&A answer generation step requires an LLM. I plan to use the **Groq API** (free tier available at console.groq.com) with `llama3-8b-8192` model. The user needs a free Groq API key. Alternatively, the system falls back to showing retrieved chunks without LLM synthesis if no key is provided.
+
+> [!IMPORTANT]
+> **GitHub Steps (manual)**: The assignment requires you to:
+> 1. **Star** the Endee repo: https://github.com/endee-io/endee
+> 2. **Fork** the repo to your personal GitHub account
+> 3. Create a **new GitHub repository** for your project and push the code there
+> I will create all the code locally; you will need to push it to GitHub.
+
+## Proposed Changes
+
+### Project Structure
+
+```
+Assignment/
+├── docker-compose.yml          # Endee vector DB server
+├── requirements.txt            # Python dependencies
+├── .env.example                # Environment variable template
+├── README.md                   # Full project documentation
+├── backend/
+│   ├── app.py                  # FastAPI application (main backend)
+│   ├── endee_client.py         # Endee connection + index management
+│   ├── embedder.py             # Sentence-transformer embedding logic
+│   ├── document_processor.py   # PDF/TXT chunking pipeline
+│   └── llm_client.py           # Groq LLM for answer generation
+├── frontend/
+│   ├── index.html              # Main single-page application
+│   ├── style.css               # Modern dark-themed UI styles
+│   └── app.js                  # Frontend logic (upload, chat, search)
+├── data/
+│   └── sample_docs/            # Sample documents for demo
+│       ├── ai_overview.txt
+│       └── machine_learning.txt
+└── scripts/
+    └── ingest_sample.py        # Demo: ingest sample documents into Endee
+```
+
+---
+
+### Backend (Python/FastAPI)
+
+#### [NEW] `docker-compose.yml`
+Spins up the Endee vector database server on port 8080 using the official Docker image.
+
+#### [NEW] `requirements.txt`
+```
+fastapi
+uvicorn
+endee
+sentence-transformers
+PyMuPDF  # for PDF parsing
+python-multipart
+groq
+python-dotenv
+requests
+```
+
+#### [NEW] `backend/endee_client.py`
+- Connects to Endee at `http://localhost:8080`
+- Creates an index named `documents` with dimension=384 (matching all-MiniLM-L6-v2), cosine similarity
+- Provides `upsert_chunks()` and `search()` helper functions
+
+#### [NEW] `backend/embedder.py`
+- Loads `sentence-transformers/all-MiniLM-L6-v2` (dimension=384, free & fast)
+- Provides `embed(texts: list[str]) -> list[list[float]]`
+
+#### [NEW] `backend/document_processor.py`
+- Reads PDF (via PyMuPDF) or TXT files
+- Splits text into overlapping chunks (512 chars, 50 char overlap)
+- Returns list of `{"id", "text", "source", "chunk_index"}` dicts
+
+#### [NEW] `backend/llm_client.py`
+- Uses Groq Python SDK to call `llama3-8b-8192`
+- Takes `query + context_chunks` → returns synthesized answer
+- Falls back gracefully if no API key
+
+#### [NEW] `backend/app.py`
+FastAPI app with these endpoints:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `GET /health` | GET | Health check |
+| `POST /upload` | POST | Upload + ingest document into Endee |
+| `POST /search` | POST | Semantic search, returns top-k chunks |
+| `POST /ask` | POST | Full RAG: search + LLM answer generation |
+| `GET /documents` | GET | List all ingested documents |
+| `DELETE /documents/{doc_id}` | DELETE | Remove a document's chunks |
+
+---
+
+### Frontend (HTML/CSS/JS)
+
+#### [NEW] `frontend/index.html` + `frontend/style.css` + `frontend/app.js`
+Modern dark-themed single-page app with:
+- **Upload Panel**: Drag-and-drop or click to upload PDF/TXT
+- **Chat Interface**: Natural language Q&A with streamed responses
+- **Semantic Search**: Pure vector search mode showing matching chunks with similarity scores
+- **Document Manager**: List of indexed documents with delete option
+
+---
+
+### Documentation
+
+#### [NEW] `README.md`
+Comprehensive README covering:
+- Project overview and what it demonstrates
+- System architecture diagram (ASCII/text)
+- How Endee is used (index creation, upsert, query)
+- Setup instructions (Docker + Python)
+- API reference
+- Sample usage
+
+#### [NEW] `data/sample_docs/`
+2-3 sample text files covering AI/ML topics for instant demo without needing to upload files.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+
+1. **Start Endee server:**
+   ```bash
+   cd /Users/chandankumar/Desktop/Assignment
+   docker-compose up -d
+   curl http://localhost:8080/health
+   ```
+
+2. **Install dependencies and start backend:**
+   ```bash
+   cd /Users/chandankumar/Desktop/Assignment
+   pip install -r requirements.txt
+   cd backend && uvicorn app:app --reload --port 8000
+   ```
+
+3. **Test ingestion via ingest script:**
+   ```bash
+   cd /Users/chandankumar/Desktop/Assignment
+   python scripts/ingest_sample.py
+   ```
+
+4. **Test API endpoints:**
+   ```bash
+   # Health check
+   curl http://localhost:8000/health
+
+   # Search for relevant chunks
+   curl -X POST http://localhost:8000/search \
+     -H "Content-Type: application/json" \
+     -d '{"query": "What is machine learning?", "top_k": 3}'
+
+   # Full RAG Q&A
+   curl -X POST http://localhost:8000/ask \
+     -H "Content-Type: application/json" \
+     -d '{"question": "What is machine learning?", "top_k": 3}'
+   ```
+
+5. **Open the frontend** in a browser by opening `frontend/index.html` via a local server or directly.
+
+### Manual Verification (Browser)
+- Open `http://localhost:8000` (or open `frontend/index.html`)
+- Upload a sample PDF or TXT document
+- Type a question in the chat box
+- Verify you get a relevant AI-generated answer with source citations

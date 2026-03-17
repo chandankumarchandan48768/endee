@@ -1,0 +1,116 @@
+# Walkthrough — Endee RAG Document Q&A System
+
+## What Was Built
+
+A complete **Retrieval Augmented Generation (RAG)** system using **Endee** as the vector database. Users upload PDF/TXT documents, the system indexes them in Endee, and answers natural language questions using semantic retrieval + Llama 3 via Groq.
+
+---
+
+## Files Created
+
+| File | Purpose |
+|------|---------|
+| [docker-compose.yml](file:///Users/chandankumar/Desktop/Assignment/docker-compose.yml) | Runs Endee vector DB on port 8080 |
+| [requirements.txt](file:///Users/chandankumar/Desktop/Assignment/requirements.txt) | Python dependencies (11 packages) |
+| [.env.example](file:///Users/chandankumar/Desktop/Assignment/.env.example) | Environment variable template |
+| [.gitignore](file:///Users/chandankumar/Desktop/Assignment/.gitignore) | Git ignore rules |
+| [README.md](file:///Users/chandankumar/Desktop/Assignment/README.md) | Full project documentation |
+| [backend/app.py](file:///Users/chandankumar/Desktop/Assignment/backend/app.py) | FastAPI app — 6 REST endpoints |
+| [backend/endee_client.py](file:///Users/chandankumar/Desktop/Assignment/backend/endee_client.py) | Endee SDK wrapper (index, upsert, search, delete) |
+| [backend/embedder.py](file:///Users/chandankumar/Desktop/Assignment/backend/embedder.py) | Sentence-transformers MiniLM-L6-v2 (384 dims) |
+| [backend/document_processor.py](file:///Users/chandankumar/Desktop/Assignment/backend/document_processor.py) | PDF/TXT chunking pipeline (pypdf) |
+| [backend/llm_client.py](file:///Users/chandankumar/Desktop/Assignment/backend/llm_client.py) | Groq API (Llama 3) with graceful fallback |
+| [frontend/index.html](file:///Users/chandankumar/Desktop/Assignment/frontend/index.html) | Single-page app UI |
+| [frontend/style.css](file:///Users/chandankumar/Desktop/Assignment/frontend/style.css) | Dark premium theme |
+| [frontend/app.js](file:///Users/chandankumar/Desktop/Assignment/frontend/app.js) | Chat, search, upload, document management |
+| [data/sample_docs/ai_overview.txt](file:///Users/chandankumar/Desktop/Assignment/data/sample_docs/ai_overview.txt) | Sample doc: AI overview |
+| [data/sample_docs/vector_databases_and_rag.txt](file:///Users/chandankumar/Desktop/Assignment/data/sample_docs/vector_databases_and_rag.txt) | Sample doc: Vector DBs & RAG |
+| [scripts/ingest_sample.py](file:///Users/chandankumar/Desktop/Assignment/scripts/ingest_sample.py) | Seeds Endee with sample documents |
+
+---
+
+## Verification Results
+
+### ✅ Python Environment
+
+```
+$ pip install -r requirements.txt
+Successfully installed:
+  endee-0.1.19
+  fastapi-0.111.0
+  uvicorn-0.30.1
+  sentence-transformers-3.0.1
+  pypdf-6.9.0
+  groq-0.9.0
+  python-dotenv-1.0.1
+  ... and all transitive dependencies
+```
+
+> **Note**: Replaced `PyMuPDF` with `pypdf` (pure Python, no C build required) for macOS ARM compatibility.
+
+### ✅ Project Structure
+
+```
+Assignment/
+├── docker-compose.yml
+├── requirements.txt
+├── .env.example / .env
+├── .gitignore
+├── README.md
+├── backend/       (5 files)
+├── frontend/      (3 files)
+├── data/sample_docs/ (2 sample txt files)
+├── scripts/       (1 file)
+└── venv/          (installed packages)
+```
+
+---
+
+## How to Run (for Submission Demo)
+
+### 1. Start Endee
+```bash
+docker-compose up -d
+```
+
+### 2. Add Groq API Key (optional)
+```bash
+# Edit .env:
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+### 3. Start Backend
+```bash
+source venv/bin/activate
+cd backend
+uvicorn app:app --reload --port 8000
+```
+
+### 4. Open Browser
+Go to **http://localhost:8000**
+
+### 5. Load Sample Data
+Click **"Load Sample Docs"** in the sidebar, then ask questions like:
+- *"What is machine learning?"*
+- *"How does Endee index vectors?"*
+- *"What are the applications of AI in healthcare?"*
+
+---
+
+## GitHub Push Instructions
+
+```bash
+cd /Users/chandankumar/Desktop/Assignment
+
+git init
+git add .
+git commit -m "Initial commit: Endee RAG Document Q&A System"
+git remote add origin https://github.com/YOUR_USERNAME/endee-rag-qa.git
+git branch -M main
+git push -u origin main
+```
+
+> **Important**: Before pushing, make sure you have:
+> - ⭐ Starred https://github.com/endee-io/endee
+> - 🍴 Forked https://github.com/endee-io/endee to your account
+> - Created your project repo (`endee-rag-qa` or similar)
