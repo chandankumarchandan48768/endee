@@ -109,25 +109,27 @@ class EndeeClient:
             )
         return output
 
-    def delete_by_doc_id(self, doc_id: str):
-        """Delete all chunks for a given document."""
-        # Endee supports filtering; we delete by iterating IDs with filter
-        # Since SDK delete by filter may vary, we search broadly and delete
+    def delete_by_doc_id(self, doc_id: str) -> int:
+        """Delete all chunks for a given document using Endee's filter-based delete."""
         try:
+            # First count how many chunks exist for this doc
             dummy_vec = [0.0] * EMBEDDING_DIM
             results = self.index.query(
                 vector=dummy_vec,
                 top_k=512,
                 filter={"doc_id": doc_id},
             )
-            ids = [r.get("id") for r in results]
-            if ids:
-                self.index.delete(ids)
-                logger.info(f"Deleted {len(ids)} chunks for doc_id='{doc_id}'.")
-            return len(ids)
+            count = len(results)
+
+            if count > 0:
+                # Use the correct Endee SDK method: delete_with_filter
+                self.index.delete_with_filter({"doc_id": doc_id})
+                logger.info(f"Deleted {count} chunks for doc_id='{doc_id}'.")
+
+            return count
         except Exception as e:
             logger.warning(f"Could not delete chunks for doc_id='{doc_id}': {e}")
-            return 0
+            raise
 
     def list_documents(self) -> List[Dict[str, Any]]:
         """Return a summary of unique ingested documents."""
